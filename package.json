@@ -1,0 +1,74 @@
+{
+  "name": "runcraft",
+  "version": "0.1.0",
+  "description": "A visual control center for local dev servers. Start, stop and watch every service in your project from one canvas in your browser.",
+  "author": "Kiran Kumar V <thekirankumarv@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/thekirankumarv/runcraft#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thekirankumarv/runcraft.git"
+  },
+  "bugs": "https://github.com/thekirankumarv/runcraft/issues",
+  "keywords": [
+    "dev-server",
+    "process-manager",
+    "dashboard",
+    "monorepo",
+    "procfile",
+    "localhost",
+    "developer-tools",
+    "devtools",
+    "logs",
+    "env"
+  ],
+  "type": "module",
+  "bin": {
+    "runcraft": "dist/server/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "packageManager": "pnpm@10.28.1",
+  "scripts": {
+    "dev": "node --watch-path=server server/index.ts --dev --port 4950 --no-open & vite",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "node dist/server/index.js",
+    "test": "node --test server/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.server.json && tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "pnpm test && pnpm build",
+    "format": "prettier --write .",
+    "lint": "prettier --check . && pnpm typecheck"
+  },
+  "dependencies": {
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@dagrejs/dagre": "^3.1.3",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "@tanstack/react-virtual": "^3.14.26",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^6.3.0",
+    "@xyflow/react": "^12.12.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.77.0",
+    "monaco-editor": "^0.57.0",
+    "prettier": "^3.10.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sonner": "^2.0.8",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "zustand": "^5.1.0"
+  }
+}
