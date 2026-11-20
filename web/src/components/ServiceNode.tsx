@@ -1,12 +1,23 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { ArrowUpRight, Play, RotateCw, Square, TriangleAlert } from 'lucide-react'
-import { memo } from 'react'
+import { memo, type ReactNode } from 'react'
 import { countErrors } from '../lib/logs'
 import { isLive, killPortAndStart, serviceAction, useStore } from '../lib/store'
 import { cx, formatBytes, IconButton, ServiceIcon, Sparkline, STATUS, StatusPill } from './ui'
 
 export const NODE_W = 272
 export const NODE_H = 124
+
+function Tip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="group/tip relative inline-flex">
+      {children}
+      <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-panel px-1.5 py-0.5 text-[10.5px] text-fg opacity-0 shadow-lg transition-opacity group-hover/tip:opacity-100">
+        {label}
+      </span>
+    </span>
+  )
+}
 
 function ServiceNode({ id, selected }: NodeProps) {
   const cfg = useStore((s) => s.config?.services.find((x) => x.id === id))
@@ -100,23 +111,29 @@ function ServiceNode({ id, selected }: NodeProps) {
         {errors > 0 && !live && <span className="text-red-400/80">{errors} errors</span>}
         <div className="nodrag ml-auto flex items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
           {live ? (
-            <IconButton
-              icon={Square}
-              size={12}
-              label="Stop"
-              onClick={(e) => (e.stopPropagation(), serviceAction(id, 'stop'))}
-              disabled={status === 'stopping'}
-            />
+            <Tip label="Stop">
+              <IconButton
+                icon={Square}
+                size={12}
+                label="Stop"
+                onClick={(e) => (e.stopPropagation(), serviceAction(id, 'stop'))}
+                disabled={status === 'stopping'}
+              />
+            </Tip>
           ) : (
-            <IconButton
-              icon={Play}
-              size={13}
-              label="Start (with dependencies)"
-              onClick={(e) => (e.stopPropagation(), serviceAction(id, 'start'))}
-              className="hover:text-emerald-300"
-            />
+            <Tip label="Start (with dependencies)">
+              <IconButton
+                icon={Play}
+                size={13}
+                label="Start (with dependencies)"
+                onClick={(e) => (e.stopPropagation(), serviceAction(id, 'start'))}
+                className="hover:text-emerald-300"
+              />
+            </Tip>
           )}
-          <IconButton icon={RotateCw} size={12} label="Restart" disabled={!live} onClick={(e) => (e.stopPropagation(), serviceAction(id, 'restart'))} />
+          <Tip label={live ? 'Restart' : 'Restart (not running)'}>
+            <IconButton icon={RotateCw} size={12} label="Restart" disabled={!live} onClick={(e) => (e.stopPropagation(), serviceAction(id, 'restart'))} />
+          </Tip>
         </div>
       </div>
       <Handle type="source" position={Position.Right} />
