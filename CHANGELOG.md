@@ -5,6 +5,7 @@
 - Published from GitHub Actions with npm provenance, so every release can be traced to its source
 - README: download and Node.js version badges, changelog link
 - Code of conduct and automated dependency updates
+- Updated DOMPurify, used by the diff editor, to fix five low-severity advisories
 
 ## 0.1.0
 
