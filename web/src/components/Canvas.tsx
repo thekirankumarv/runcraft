@@ -14,8 +14,9 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react'
-import { LayoutGrid, Maximize, Plus } from 'lucide-react'
+import { LayoutGrid, Lock, LockOpen, Maximize, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { create } from 'zustand'
 import { isLive, saveConfig, select, useStore } from '../lib/store'
 import { useTheme } from '../lib/theme'
 import type { ServiceConfig } from '../lib/types'
@@ -38,9 +39,29 @@ export function autoLayout(services: ServiceConfig[]) {
   })
 }
 
+const LOCK_KEY = 'runcraft.layoutLocked'
+
+function readLocked() {
+  try {
+    return localStorage.getItem(LOCK_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const useLock = create<{ locked: boolean }>(() => ({ locked: readLocked() }))
+
+function toggleLock() {
+  const locked = !useLock.getState().locked
+  try {
+    localStorage.setItem(LOCK_KEY, locked ? '1' : '0')
+  } catch {}
+  useLock.setState({ locked })
+}
+
 export function arrange() {
   const cfg = useStore.getState().config
-  if (cfg) saveConfig({ ...cfg, services: autoLayout(cfg.services) })
+  if (cfg && !useLock.getState().locked) saveConfig({ ...cfg, services: autoLayout(cfg.services) })
 }
 
 // New services go to the right of the existing layout instead of reshuffling it.
@@ -60,6 +81,7 @@ function Flow() {
   const services = useStore((s) => s.services)
   const flow = useReactFlow()
   const theme = useTheme((s) => s.theme)
+  const locked = useLock((s) => s.locked)
   const [nodes, setNodes] = useState<Node[]>([])
 
   useEffect(() => {
@@ -132,6 +154,9 @@ function Flow() {
       onNodeDragStop={onDragStop}
       onConnect={onConnect}
       onEdgesDelete={onEdgesDelete}
+      nodesDraggable={!locked}
+      nodesConnectable={!locked}
+      deleteKeyCode={locked ? null : undefined}
       onNodeClick={(_, n) => select(n.id)}
       onPaneClick={() => select(undefined)}
       fitView
@@ -147,8 +172,11 @@ function Flow() {
         <Button onClick={() => useStore.setState({ dialog: 'add' })}>
           <Plus size={14} /> Add service
         </Button>
-        <Button onClick={arrange} title="Auto-arrange">
+        <Button onClick={arrange} disabled={locked} title="Auto-arrange">
           <LayoutGrid size={14} /> Arrange
+        </Button>
+        <Button onClick={toggleLock} title={locked ? 'Unlock layout' : 'Lock layout'} className={locked ? 'text-violet-300' : undefined}>
+          {locked ? <Lock size={14} /> : <LockOpen size={14} />}
         </Button>
         <Button onClick={() => flow.fitView({ padding: 0.3, maxZoom: 1.1, duration: 300 })} title="Fit to screen">
           <Maximize size={14} />
