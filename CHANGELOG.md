@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- Published from GitHub Actions with npm provenance, so every release can be traced to its source
+- README: download and Node.js version badges, changelog link
+- Code of conduct and automated dependency updates
+
 ## 0.1.0
 
 First release.
