@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Runcraft. Bug reports, ideas and pull requests are all welcome.
+Thanks for helping improve Runcraft. Bug reports, ideas and pull requests are all welcome. Please follow the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 

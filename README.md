@@ -8,6 +8,8 @@ Start, stop and watch every service in your project from one canvas in your brow
 No more juggling terminal tabs.
 
 [![npm](https://img.shields.io/npm/v/runcraft.svg)](https://www.npmjs.com/package/runcraft)
+[![downloads](https://img.shields.io/npm/dm/runcraft.svg)](https://www.npmjs.com/package/runcraft)
+[![node](https://img.shields.io/node/v/runcraft.svg)](https://nodejs.org)
 [![CI](https://github.com/thekirankumarv/runcraft/actions/workflows/ci.yml/badge.svg)](https://github.com/thekirankumarv/runcraft/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -129,6 +131,7 @@ Settings that only apply to your machine, such as a different port, your editor 
 - [Troubleshooting](docs/troubleshooting.md): common problems and fixes
 - [Security](SECURITY.md): how Runcraft protects your machine, and how to report a vulnerability
 - [Contributing](CONTRIBUTING.md): run Runcraft from source and send a pull request
+- [Changelog](CHANGELOG.md): what changed in each release
 
 ## Security
 
