@@ -34,6 +34,7 @@ export interface ProjectConfig {
   services: ServiceConfig[]
   profiles?: Record<string, string[]>
   envProfiles?: string[]
+  lockedEnvs?: string[]
   editor?: string
 }
 
@@ -42,6 +43,20 @@ export interface LocalConfig {
   envProfile?: string
   editor?: string
   services?: Record<string, Partial<ServiceConfig>>
+}
+
+export interface TrafficEntry {
+  seq: number
+  t: number
+  ms: number
+  method: string
+  url: string
+  host?: string
+  status: number
+  reqHeaders: Record<string, string | string[]>
+  resHeaders: Record<string, string | string[] | number>
+  req: { size: number; body?: string; truncated?: boolean }
+  res: { size: number; body?: string; truncated?: boolean }
 }
 
 export type Status = 'idle' | 'starting' | 'running' | 'unhealthy' | 'stopping' | 'stopped' | 'crashed'

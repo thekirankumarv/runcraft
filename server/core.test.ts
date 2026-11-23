@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
+import http from 'node:http'
 import os from 'node:os'
+import path from 'node:path'
 import { test } from 'node:test'
 import { updateEnvText } from './env.ts'
 import { levelOf, portFrom, ServiceProcess } from './proc.ts'
@@ -87,4 +89,39 @@ test('port listings parse on every platform', () => {
     { pid: 10, ppid: 1, cpu: 2.5, mem: 2048 * 1024 },
     { pid: 11, ppid: 10, cpu: 0, mem: 512 * 1024 },
   ])
+})
+
+test('traffic hook reports requests without breaking late body reads', async () => {
+  const received: any[] = []
+  const sink = http.createServer((req, res) => {
+    let raw = ''
+    req.on('data', (c) => (raw += c))
+    req.on('end', () => {
+      assert.equal(req.headers['x-runcraft-token'], 'tok')
+      received.push(...JSON.parse(raw))
+      res.end('{}')
+    })
+  })
+  await new Promise<void>((r) => sink.listen(0, '127.0.0.1', r))
+  const sinkPort = (sink.address() as { port: number }).port
+  const app = `require('http').createServer((req, res) => setTimeout(() => { let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => { res.writeHead(201, { 'content-type': 'application/json' }); res.end(JSON.stringify({ echo: JSON.parse(b) })) }) }, 30)).listen(0, function () { console.log(this.address().port) })`
+  const child = spawn(process.execPath, ['--require', path.join(import.meta.dirname, 'hook.cjs'), '-e', app], {
+    env: { ...process.env, RUNCRAFT_TRAFFIC: `http://127.0.0.1:${sinkPort}/`, RUNCRAFT_TOKEN: 'tok' },
+  })
+  try {
+    const port = await new Promise<number>((r) => child.stdout.once('data', (d) => r(Number(String(d).trim()))))
+    const res = await fetch(`http://127.0.0.1:${port}/users?x=1`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"name":"Ada"}' })
+    assert.deepEqual(await res.json(), { echo: { name: 'Ada' } })
+    for (let i = 0; i < 40 && !received.length; i++) await new Promise((r) => setTimeout(r, 50))
+    const [e] = received
+    assert.equal(e.method, 'POST')
+    assert.equal(e.url, '/users?x=1')
+    assert.equal(e.status, 201)
+    assert.equal(e.req.body, '{"name":"Ada"}')
+    assert.equal(e.res.body, '{"echo":{"name":"Ada"}}')
+    assert.equal(e.resHeaders['content-type'], 'application/json')
+  } finally {
+    child.kill()
+    sink.close()
+  }
 })

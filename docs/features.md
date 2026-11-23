@@ -35,6 +35,8 @@ Open a service and choose **Logs**.
 
 Runcraft keeps the latest 5,000 lines per service.
 
+The **Logs** view in the top bar shows every service's output in one stream, ordered by time and tagged with the service name. It has the same search, level filters and controls.
+
 ## Overview
 
 ![Overview](screenshots/overview.png)
@@ -45,7 +47,7 @@ A health dashboard for the whole project: how many services are online, crashes,
 
 ![Problems](screenshots/problems.png)
 
-Every error from every service in one list. Repeats of the same error are grouped with a count, even when they differ only in timestamps or IDs. Click an error to open that service's logs, filtered to errors.
+Every error from every service in one list. Repeats of the same error are grouped with a count, even when they differ only in timestamps or IDs. Click an error to open that service's logs, filtered to errors. When more than one service has errors, **Clear all** clears every service's logs at once.
 
 ## Variables
 
@@ -60,15 +62,46 @@ Edit a service's environment variables as a table or as raw text.
 
 If a service has no env file, variables are stored in `runcraft.json` under `env`.
 
+If the service's folder has a `.env.example` (or `.env.sample`, `.env.template`, `.env.dist`), Runcraft checks it against the service's variables. Any key that isn't set shows as a warning on the canvas node and in the Variables tab, where **Add them** adds the missing keys for you to fill in. Starting the service also logs which ones are missing.
+
 ### Environment profiles
 
 Add profiles like `staging` in **Settings → Environment profiles**, then switch with the button in the top bar. With a profile active, each service reads its env file and then `<envFile>.<profile>` on top, for example `.env` and then `.env.staging`. Values that come from the base file are shown dimmed, and **Override** copies one into the profile file. Edits go to the profile file.
+
+Click the lock on a profile in Settings to make its values read-only, for example `prod`. The top bar turns red while a locked profile is active, and Runcraft refuses edits to its env file until you unlock it.
 
 ## Changes
 
 ![Changes](screenshots/changes.png)
 
 Lists uncommitted git changes in the project. Pick a file to see a side-by-side or inline diff. The right side is editable: press <kbd>⌘S</kbd> / <kbd>Ctrl+S</kbd> to save, or turn on **Autosave**. **Open in editor** opens the file in your editor.
+
+- Tick files to stage them, or use **Stage all**.
+- Write a message and press **Commit** (or <kbd>⌘Enter</kbd> / <kbd>Ctrl+Enter</kbd>). With nothing staged, **Commit all** commits every change.
+- Runcraft fetches from the remote in the background about once a minute. When the remote has commits you don't, **Pull** appears (fast-forward only).
+- **Push** appears when you have commits the remote doesn't. A branch with no remote yet shows **Publish branch**, which pushes it to `origin`.
+- Click the branch name to switch branches. Hover it to see the full name.
+
+Runcraft never asks for credentials. If a push needs a login, it fails with git's message; push once from your own terminal to set up access.
+
+## Terminal
+
+The **Terminal** view runs your own shell, in the project folder.
+
+- **+** opens another tab. Close a tab with its **×** or a middle-click.
+- **Run script** lists the `package.json` scripts of the project and of each service's folder, grouped by service, and runs the one you pick in a new tab in that folder.
+- Open a service and choose **Terminal** to start a shell in that service's folder.
+- Press <kbd>Ctrl+`</kbd> to show or hide the terminal, from anywhere in the app.
+- Terminals keep running when you reload the page or switch view or project, and reconnect with their recent output. A terminal nobody is viewing is closed after 10 minutes.
+- If the shell exits, the tab shows **Session ended** with a **Restart** button.
+
+Terminals stop when Runcraft stops.
+
+## Traffic
+
+Each service has a **Traffic** tab listing the HTTP requests it receives, as they happen: method, path, status and time. Click one to see its headers and body, copy it as cURL, or **Replay in HTTP** to edit and resend it. **Hide assets** hides scripts, styles, images and fonts, which dev servers like Vite serve a lot of.
+
+Capture works for Node.js servers. Runcraft adds a small hook through `NODE_OPTIONS` when it starts a service, so nothing changes in your code or URLs. Bodies over 32 KB are cut off, compressed or binary bodies are not shown, and the last 300 requests are kept. Services in other languages, and dev scripts that set `NODE_OPTIONS` themselves, show no traffic.
 
 ## HTTP client
 
@@ -82,6 +115,12 @@ Requests are sent from the Runcraft server, so there are no CORS problems.
 
 Lists every process listening on a TCP port on your machine, with the Runcraft service that owns it. Filter by port or process name, and kill a process to free its port. Killing asks for confirmation.
 
+## Phone
+
+The phone button in the top bar opens Runcraft on a phone on the same Wi-Fi. Turn it on and scan the QR code. The phone page shows each service's status, uptime and usage, lets you start, stop and restart services, and follows logs live.
+
+It runs as a separate server on your network with its own link, which only works until you turn it off or Runcraft stops. Terminals, git, env editing, port killing and the HTTP client are not available from the phone. Anyone on the network with the link can see logs, so turn it off when you are done.
+
 ## Command palette
 
 ![Command palette](screenshots/palette.png)
@@ -89,7 +128,8 @@ Lists every process listening on a TCP port on your machine, with the Runcraft s
 Press <kbd>⌘K</kbd> on macOS or <kbd>Ctrl+K</kbd> on Windows and Linux to:
 
 - start, stop or restart any service, or start a profile
-- open a service's logs
+- open a service's logs, or a terminal in its folder
+- open a new terminal
 - jump to any view
 - switch project, environment or theme
 - add a service, arrange the canvas or open a folder

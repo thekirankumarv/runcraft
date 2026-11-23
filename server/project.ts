@@ -186,7 +186,11 @@ export class Project {
 
   // Flag running services that read this env file so the UI can prompt a restart.
   envChanged(file: string) {
-    for (const p of this.procs.values()) if (this.envFilePath(p.cfg) === file || this.envTargetPath(p.cfg) === file) p.markRestart()
+    for (const p of this.procs.values())
+      if (this.envFilePath(p.cfg) === file || this.envTargetPath(p.cfg) === file) {
+        p.markRestart()
+        p.emitStatus()
+      }
   }
 
   snapshot() {
@@ -225,8 +229,10 @@ export class Project {
       }
       const p = new ServiceProcess(s, this.root, () => this.envFor(p.cfg))
       p.overrides = Object.keys(overrides)
+      p.projectId = this.id
       p.on('log', (line) => this.emit({ type: 'log', project: this.id, id: p.cfg.id, line }))
       p.on('status', (snap) => this.emit({ type: 'status', project: this.id, service: snap }))
+      p.on('traffic', (entries) => this.emit({ type: 'traffic', project: this.id, id: p.cfg.id, entries }))
       this.procs.set(s.id, p)
     }
   }

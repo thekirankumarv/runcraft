@@ -38,6 +38,13 @@ export default function HttpClient({ id }: { id: string }) {
     setReq((r) => ({ ...r, url: `http://localhost:${port ?? 3000}/` }))
   }, [id])
 
+  const draft = useStore((s) => s.httpDraft)
+  useEffect(() => {
+    if (!draft) return
+    load(draft)
+    useStore.setState({ httpDraft: undefined })
+  }, [draft])
+
   const send = async () => {
     setLoading(true)
     try {

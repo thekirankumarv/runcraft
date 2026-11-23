@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import { backupPath } from './store.ts'
 
 const LINE = /^\s*(?:export\s+)?([A-Za-z_][\w.-]*)\s*=\s*(.*)$/
@@ -37,6 +38,14 @@ export function readEnvFile(file: string): Record<string, string> {
   } catch {
     return {}
   }
+}
+
+const EXAMPLES = ['.env.example', '.env.sample', '.env.template', '.env.dist']
+
+export function missingEnvKeys(dir: string, env: Record<string, string>): string[] {
+  const example = EXAMPLES.map((f) => path.join(dir, f)).find((f) => fs.existsSync(f))
+  if (!example) return []
+  return Object.keys(readEnvFile(example)).filter((k) => !(k in env) && !(k in process.env))
 }
 
 // Rewrites only lines whose value changed so comments, order and blank lines survive.

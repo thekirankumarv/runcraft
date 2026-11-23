@@ -8,15 +8,17 @@ import Palette from './components/Palette'
 import PortsView from './components/PortsView'
 import ProblemsView, { collectProblems } from './components/ProblemsView'
 import OverviewView from './components/OverviewView'
+import LogView from './components/LogView'
 import ServicePanel from './components/ServicePanel'
 import SettingsView from './components/SettingsView'
 import TopBar, { ChooseDialog } from './components/TopBar'
-import { Button, Empty } from './components/ui'
+import { Button, cx, Empty } from './components/ui'
 import { api, ApiError, connectSocket } from './lib/api'
-import { fail, handleMessages, loadProjects, openProject, setHome, useStore } from './lib/store'
+import { fail, handleMessages, loadProjects, openProject, setHome, toggleTerminal, useStore } from './lib/store'
 import { useTheme } from './lib/theme'
 
 const GitView = lazy(() => import('./components/GitView'))
+const TerminalView = lazy(() => import('./components/TerminalView'))
 
 let booted = false
 
@@ -61,6 +63,8 @@ export default function App() {
   const authError = useStore((s) => s.authError)
   const pid = useStore((s) => s.pid)
   const view = useStore((s) => s.view)
+  const [termOpened, setTermOpened] = useState(false)
+  if (view === 'terminal' && !termOpened) setTermOpened(true)
   const selected = useStore((s) => s.selected)
   const logs = useStore((s) => s.logs)
   const problems = useMemo(() => collectProblems(logs), [logs])
@@ -80,6 +84,17 @@ export default function App() {
         first = false
       })
     })
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.code !== 'Backquote') return
+      e.preventDefault()
+      e.stopPropagation()
+      toggleTerminal()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
   if (!ready) return <div className="h-full bg-bg" />
@@ -106,6 +121,8 @@ export default function App() {
             </Empty>
           ) : view === 'canvas' ? (
             <Canvas />
+          ) : view === 'terminal' ? null : view === 'logs' ? (
+            <LogView />
           ) : view === 'overview' ? (
             <OverviewView problemCount={problems.length} />
           ) : view === 'settings' ? (
@@ -118,6 +135,13 @@ export default function App() {
             </Suspense>
           ) : (
             <PortsView />
+          )}
+          {pid && termOpened && (
+            <div className={cx('absolute inset-0', view !== 'terminal' && 'hidden')}>
+              <Suspense fallback={null}>
+                <TerminalView key={pid} />
+              </Suspense>
+            </div>
           )}
         </section>
         {pid && view === 'canvas' && selected && <ServicePanel key={selected} id={selected} />}

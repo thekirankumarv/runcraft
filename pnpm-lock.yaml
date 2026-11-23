@@ -11,6 +11,9 @@ importers:
 
   .:
     dependencies:
+      '@lydell/node-pty':
+        specifier: 1.2.0-beta.18
+        version: 1.2.0-beta.18
       ws:
         specifier: ^8.23.0
         version: 8.23.0
@@ -48,6 +51,12 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.3.0
         version: 6.3.0(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
+      '@xterm/addon-fit':
+        specifier: ^0.11.0
+        version: 0.11.0
+      '@xterm/xterm':
+        specifier: ^6.0.0
+        version: 6.0.0
       '@xyflow/react':
         specifier: ^12.12.1
         version: 12.12.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -78,6 +87,9 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      uqr:
+        specifier: 0.1.3
+        version: 0.1.3
       vite:
         specifier: ^8.3.8
         version: 8.3.8(@types/node@26.6.6)(jiti@2.7.0)
@@ -123,6 +135,39 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@lydell/node-pty-darwin-arm64@1.2.0-beta.18':
+    resolution: {integrity: sha512-gJizeNHkkKCoggtj5Q0yf4btK6dPfr7E063SrOh1jHXp3IyjiErU4KwT7Cn29qb/OY5pBo/Utctenl03MyBtAg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@lydell/node-pty-darwin-x64@1.2.0-beta.18':
+    resolution: {integrity: sha512-xnJQz+i5v7pkR1xo14ffTwvMm2DoK3KqPACQaJqxtMVkM7ojv14/KmkaV2jte7Q0BIzfU+VbKVUL9Zmf23G8VQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@lydell/node-pty-linux-arm64@1.2.0-beta.18':
+    resolution: {integrity: sha512-fM8jRcZDZwG7ihEOx/R7N1aGHdT4Fd6IQj1d6Jp7Qb9FeDWlIwLuVlxUkJOsW4V1ZmJe1xZl2+WR0RjqMvb2+Q==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@lydell/node-pty-linux-x64@1.2.0-beta.18':
+    resolution: {integrity: sha512-LGikvfcvoPrxXO7o1gCsd5ErrRWnQFYLxjJfX0uwBpi0oGPiTERUBLzKspzZs7wjXZqF30mnNB/C09uotu5vRA==}
+    cpu: [x64]
+    os: [linux]
+
+  '@lydell/node-pty-win32-arm64@1.2.0-beta.18':
+    resolution: {integrity: sha512-S6h4G3zYGe+pPQxhlNxg+MvJNUIwXFxhnUufx1QT45TgratKMxQfoGPidvnwoLwuXQ3hqQ7SsI93rH8RUoL09g==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@lydell/node-pty-win32-x64@1.2.0-beta.18':
+    resolution: {integrity: sha512-wBSMeAwEL04t694ln+QbLnc98YeF3mAwWm/NP8acYDAobPw/WK7KKpk8z07iyxv0gRH2Z2/L/f6vgtnBgxE0Bg==}
+    cpu: [x64]
+    os: [win32]
+
+  '@lydell/node-pty@1.2.0-beta.18':
+    resolution: {integrity: sha512-ryy4liRcw6QBBKWDIbJgTW7Pw8NI2xjri/5s/LZg/jJ8ZVg8MgA1xI/vjpT5qTvDvPjUpU5NybJBrKRgK/QvlA==}
 
   '@monaco-editor/loader@1.7.0':
     resolution: {integrity: sha512-gIwR1HrJrrx+vfyOhYmCZ0/JcWqG5kbfG7+d3f/C1LXk2EvzAbHSg3MQ5lO2sMlo9izoAZ04shohfKLVT6crVA==}
@@ -676,6 +721,12 @@ packages:
       oxc-transform-react:
         optional: true
 
+  '@xterm/addon-fit@0.11.0':
+    resolution: {integrity: sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g==}
+
+  '@xterm/xterm@6.0.0':
+    resolution: {integrity: sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg==}
+
   '@xyflow/react@12.12.1':
     resolution: {integrity: sha512-g41OHmP+GL5wDBQKpgYt8AF6RlB4CrABtiStXhCMqdItK6gPdSpsuDk8V0YtdyvIvMPTjDJvkuLkz0JbSYu5Cw==}
     peerDependencies:
@@ -982,6 +1033,9 @@ packages:
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
+  uqr@0.1.3:
+    resolution: {integrity: sha512-0rjE8iEJe4YmT9TOhwsZtqCMRLc5DXZUI2UEYUUg63ikBkqqE5EYWaI0etFe/5KUcmcYwLih2RND1kq+hrUJXA==}
+
   use-callback-ref@1.3.3:
     resolution: {integrity: sha512-jQL3lRnocaFtu3V00JToYz/4QkNWswxijDaCVNZRiRTO3HQDLsdu1ZtmIUvV4yPp+rvWm5j0y0TG/S61cuijTg==}
     engines: {node: '>=10'}
@@ -1141,6 +1195,33 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.3
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@lydell/node-pty-darwin-arm64@1.2.0-beta.18':
+    optional: true
+
+  '@lydell/node-pty-darwin-x64@1.2.0-beta.18':
+    optional: true
+
+  '@lydell/node-pty-linux-arm64@1.2.0-beta.18':
+    optional: true
+
+  '@lydell/node-pty-linux-x64@1.2.0-beta.18':
+    optional: true
+
+  '@lydell/node-pty-win32-arm64@1.2.0-beta.18':
+    optional: true
+
+  '@lydell/node-pty-win32-x64@1.2.0-beta.18':
+    optional: true
+
+  '@lydell/node-pty@1.2.0-beta.18':
+    optionalDependencies:
+      '@lydell/node-pty-darwin-arm64': 1.2.0-beta.18
+      '@lydell/node-pty-darwin-x64': 1.2.0-beta.18
+      '@lydell/node-pty-linux-arm64': 1.2.0-beta.18
+      '@lydell/node-pty-linux-x64': 1.2.0-beta.18
+      '@lydell/node-pty-win32-arm64': 1.2.0-beta.18
+      '@lydell/node-pty-win32-x64': 1.2.0-beta.18
 
   '@monaco-editor/loader@1.7.0':
     dependencies:
@@ -1540,6 +1621,10 @@ snapshots:
       '@rolldown/pluginutils': 1.1.1
       vite: 8.3.8(@types/node@26.6.6)(jiti@2.7.0)
 
+  '@xterm/addon-fit@0.11.0': {}
+
+  '@xterm/xterm@6.0.0': {}
+
   '@xyflow/react@12.12.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@xyflow/system': 0.0.84
@@ -1831,6 +1916,8 @@ snapshots:
       '@typescript/typescript-win32-x64': 7.0.2
 
   undici-types@8.9.0: {}
+
+  uqr@0.1.3: {}
 
   use-callback-ref@1.3.3(@types/react@19.3.0)(react@19.3.1):
     dependencies:

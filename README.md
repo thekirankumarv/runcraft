@@ -34,7 +34,7 @@ Requires Node.js 20.11 or newer. Works on macOS and Linux. Windows support is ne
 - **Starts things in the right order.** Draw a line between two services and the dependency starts first, and must be healthy, before the other one starts.
 - **Stops things properly.** Each service's whole process tree is killed, so ports are actually freed.
 - **Shared with your team.** The setup is saved to `runcraft.json`. Commit it and everyone gets the same canvas.
-- **Fully local.** No account, no cloud, no telemetry. One small dependency.
+- **Fully local.** No account, no cloud, no telemetry. Two dependencies: `ws` and `node-pty` for the built-in terminal.
 
 ## Tour
 
@@ -56,11 +56,15 @@ Edit `.env` files as a table or raw text. Secrets are masked, and comments and o
 
 ![Variables](docs/screenshots/variables.png)
 
-### Review and edit changes
+### Review, commit and push
 
-Uncommitted git changes in a side-by-side diff, editable in place.
+Uncommitted git changes in a side-by-side diff, editable in place. Stage files, commit, push and switch branches without leaving the app.
 
 ![Changes](docs/screenshots/changes.png)
+
+### A terminal in every project
+
+Open as many terminal tabs as you need, each starting in the project or a service's folder. Run any `package.json` script from a menu. Terminals keep running when you reload the page. Press <kbd>Ctrl+`</kbd> to show or hide them.
 
 ### Test your API next to it
 
@@ -70,7 +74,7 @@ Send requests to a service and save them with it, so your team gets them too.
 
 ### Every error in one list
 
-Errors from all services, grouped and counted.
+Errors from all services, grouped and counted. Clear them all at once, or follow every service's output in one merged, searchable **Logs** stream.
 
 ![Problems](docs/screenshots/problems.png)
 
@@ -88,6 +92,8 @@ Follows your system theme, or pick one.
 
 ### And more
 
+- **Traffic inspector.** See every request a Node service receives, with headers and bodies, and replay it in one click.
+- **Phone view.** Scan a QR code to watch services and logs, and start or stop them, from your phone.
 - **Port management.** See everything listening on your machine and free a stuck port in one click. If a service's port is taken, Runcraft shows who has it and offers **Kill & start**.
 - **Auto-restart** on crash, with backoff, and **restart on file change** for processes that do not reload themselves.
 - **Start profiles** such as "Frontend" or "Backend".

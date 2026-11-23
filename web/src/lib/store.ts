@@ -1,13 +1,13 @@
 import { toast } from 'sonner'
 import { create } from 'zustand'
 import { api, clientId } from './api'
-import type { Level, LocalConfig, LogLine, ProjectConfig, ProjectInfo, ServiceConfig, ServiceState, Usage } from './types'
+import type { Level, LocalConfig, LogLine, ProjectConfig, ProjectInfo, SavedRequest, ServiceConfig, ServiceState, TrafficEntry, Usage } from './types'
 
 const MAX_LINES = 5000
 const HISTORY = 40
 
-export type View = 'canvas' | 'overview' | 'problems' | 'git' | 'ports' | 'settings'
-export type Tab = 'logs' | 'env' | 'http' | 'settings'
+export type View = 'canvas' | 'overview' | 'terminal' | 'logs' | 'problems' | 'git' | 'ports' | 'settings'
+export type Tab = 'logs' | 'env' | 'traffic' | 'http' | 'settings'
 
 interface State {
   ready: boolean
@@ -22,12 +22,22 @@ interface State {
   gitignoresLocal: boolean
   services: Record<string, ServiceState>
   logs: Record<string, LogLine[]>
+  traffic: Record<string, TrafficEntry[]>
+  httpDraft?: SavedRequest
   history: Record<string, number[]>
   selected?: string
   view: View
   tab: Tab
   logFilter?: Level | 'all'
   dialog?: 'add' | 'choose' | 'folder' | 'palette'
+  termRequest?: TermRequest
+}
+
+export interface TermRequest {
+  title?: string
+  cwd?: string
+  cmd?: string
+  n: number
 }
 
 export const useStore = create<State>(() => ({
@@ -40,6 +50,7 @@ export const useStore = create<State>(() => ({
   gitignoresLocal: false,
   services: {},
   logs: {},
+  traffic: {},
   history: {},
   view: 'canvas',
   tab: 'logs',
@@ -184,12 +195,14 @@ export function handleMessages(msgs: any[]) {
   const usage: Record<string, Usage> = {}
   let config: ProjectConfig | undefined
   let local: LocalConfig | undefined
+  const traffic: Record<string, TrafficEntry[]> = {}
   for (const m of msgs) {
     if (m.project !== pid) {
       if (m.type === 'status') loadProjects()
       continue
     }
     if (m.type === 'log') (logs[m.id] ??= []).push(m.line)
+    else if (m.type === 'traffic') (traffic[m.id] ??= []).push(...m.entries)
     else if (m.type === 'status') {
       const prev = services[m.service.id] ?? get().services[m.service.id]
       if (m.service.status === 'crashed' && prev?.status !== 'crashed') {
@@ -197,12 +210,13 @@ export function handleMessages(msgs: any[]) {
         const title = m.service.exitCode === undefined ? `${svcName(m.service.id)} couldn't start` : `${svcName(m.service.id)} crashed`
         notify(m.service.id, title, last?.text.replace(/\x1b\[[0-9;]*m/g, '') ?? `Exited with code ${m.service.exitCode}`)
       }
+      if (m.service.status === 'starting' && prev?.status !== 'starting') traffic[m.service.id] = []
       services[m.service.id] = { usage: prev?.usage, overrides: prev?.overrides, ...m.service }
     } else if (m.type === 'stats') Object.assign(usage, m.data)
     else if (m.type === 'config' && m.from !== clientId) config = m.config
     else if (m.type === 'local') local = m.local
   }
-  if (!Object.keys(logs).length && !Object.keys(services).length && !Object.keys(usage).length && !config && !local) return
+  if (!Object.keys(logs).length && !Object.keys(services).length && !Object.keys(usage).length && !Object.keys(traffic).length && !config && !local) return
   set((s) => {
     const nextLogs = { ...s.logs }
     for (const [id, lines] of Object.entries(logs)) {
@@ -215,8 +229,22 @@ export function handleMessages(msgs: any[]) {
       nextServices[id] = { ...nextServices[id], usage: u }
       history[id] = [...(history[id] ?? []), u.cpu].slice(-HISTORY)
     }
-    return { logs: nextLogs, services: nextServices, history, ...(config ? { config } : {}), ...(local ? { local } : {}) }
+    const nextTraffic = { ...s.traffic }
+    for (const [id, entries] of Object.entries(traffic))
+      if (nextTraffic[id]) nextTraffic[id] = entries.length ? [...nextTraffic[id], ...entries].slice(-300) : []
+    return { logs: nextLogs, traffic: nextTraffic, services: nextServices, history, ...(config ? { config } : {}), ...(local ? { local } : {}) }
   })
+}
+
+export function openTerminal(req: Omit<TermRequest, 'n'> = {}) {
+  set((s) => ({ view: 'terminal', termRequest: { ...req, n: (s.termRequest?.n ?? 0) + 1 } }))
+}
+
+let lastView: View = 'canvas'
+export function toggleTerminal() {
+  const { view } = get()
+  if (view !== 'terminal') lastView = view
+  set({ view: view === 'terminal' ? lastView : 'terminal' })
 }
 
 export function select(id: string | undefined, tab?: Tab) {

@@ -9,7 +9,7 @@ import { Button, cx, Dialog, Segmented, ServiceIcon } from './ui'
 
 export function useSuggestions() {
   const pid = useStore((s) => s.pid)
-  const existing = useStore((s) => s.config?.services ?? [])
+  const existing = useStore((s) => s.config?.services) ?? []
   const [list, setList] = useState<Suggestion[] | null>(null)
   useEffect(() => {
     setList(null)

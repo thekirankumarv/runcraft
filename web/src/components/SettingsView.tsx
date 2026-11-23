@@ -1,4 +1,4 @@
-import { Download, FileCode2, Plus, Trash2, Upload, X } from 'lucide-react'
+import { Download, FileCode2, Lock, LockOpen, Plus, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
@@ -58,6 +58,7 @@ export default function SettingsView() {
 
   const profiles = config.profiles ?? {}
   const envProfiles = config.envProfiles ?? []
+  const lockedEnvs = config.lockedEnvs ?? []
   const overridden = Object.values(services).filter((s) => s.overrides?.length)
 
   const addEnvProfile = () => {
@@ -148,7 +149,7 @@ export default function SettingsView() {
           description={
             <>
               With a profile active, each service reads its env file and then <span className="font-mono">.env.&lt;profile&gt;</span> on top. Edits in Variables
-              go to the profile file. Switch from the top bar.
+              go to the profile file. Switch from the top bar. Lock a profile such as prod to make its values read-only.
             </>
           }
         >
@@ -171,10 +172,17 @@ export default function SettingsView() {
               >
                 {p}
                 <button
+                  title={lockedEnvs.includes(p) ? 'Unlock: allow editing' : 'Lock: make values read-only'}
+                  onClick={() => saveConfig({ ...config, lockedEnvs: lockedEnvs.includes(p) ? lockedEnvs.filter((x) => x !== p) : [...lockedEnvs, p] })}
+                  className={cx('rounded-full p-1', lockedEnvs.includes(p) ? 'text-red-300' : 'text-faint hover:text-fg')}
+                >
+                  {lockedEnvs.includes(p) ? <Lock size={10} /> : <LockOpen size={10} />}
+                </button>
+                <button
                   title="Remove profile"
                   onClick={() => {
                     if (local.envProfile === p) saveLocal({ envProfile: '' })
-                    saveConfig({ ...config, envProfiles: envProfiles.filter((x) => x !== p) })
+                    saveConfig({ ...config, envProfiles: envProfiles.filter((x) => x !== p), lockedEnvs: lockedEnvs.filter((x) => x !== p) })
                   }}
                   className="rounded-full p-1 text-faint hover:text-red-300"
                 >

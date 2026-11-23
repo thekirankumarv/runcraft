@@ -2,8 +2,8 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { ArrowUpRight, Play, RotateCw, Square, TriangleAlert } from 'lucide-react'
 import { memo, type ReactNode } from 'react'
 import { countErrors } from '../lib/logs'
-import { isLive, killPortAndStart, serviceAction, useStore } from '../lib/store'
-import { cx, formatBytes, IconButton, ServiceIcon, Sparkline, STATUS, StatusPill } from './ui'
+import { isLive, killPortAndStart, select, serviceAction, useStore } from '../lib/store'
+import { cx, formatBytes, ServiceIcon, Sparkline, STATUS, StatusPill } from './ui'
 
 export const NODE_W = 272
 export const NODE_H = 124
@@ -12,7 +12,7 @@ function Tip({ label, children }: { label: string; children: ReactNode }) {
   return (
     <span className="group/tip relative inline-flex">
       {children}
-      <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-panel px-1.5 py-0.5 text-[10.5px] text-fg opacity-0 shadow-lg transition-opacity group-hover/tip:opacity-100">
+      <span className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-panel px-1.5 py-0.5 text-[10.5px] text-fg opacity-0 shadow-lg transition-opacity delay-150 group-hover/tip:opacity-100">
         {label}
       </span>
     </span>
@@ -58,6 +58,21 @@ function ServiceNode({ id, selected }: NodeProps) {
         </div>
       </div>
 
+      {!st?.conflict && !st?.needsRestart && !!st?.missingEnv?.length && (
+        <div className="nodrag px-3.5 pb-2.5">
+          <button
+            onClick={() => select(id, 'env')}
+            title={st.missingEnv.join(', ')}
+            className="flex w-full items-center gap-1.5 rounded-lg border border-warn/25 bg-warn/10 px-2 py-1 text-left text-[11px] text-amber-300 hover:bg-warn/15"
+          >
+            <TriangleAlert size={12} />
+            <span className="flex-1 truncate">
+              {st.missingEnv.length} env var{st.missingEnv.length === 1 ? '' : 's'} missing
+            </span>
+            <span className="font-medium">Set up</span>
+          </button>
+        </div>
+      )}
       {(st?.conflict || st?.needsRestart) && (
         <div className="nodrag px-3.5 pb-2.5">
           {st.conflict ? (
@@ -103,37 +118,42 @@ function ServiceNode({ id, selected }: NodeProps) {
           <span className="min-w-0 truncate font-mono">{cfg.cwd === '.' ? './' : cfg.cwd}</span>
         )}
         {live && st?.usage && (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono">
+          <span className="inline-flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap font-mono">
             <Sparkline values={hist ?? []} className="w-9 text-violet-400/70" />
             {st.usage.cpu.toFixed(0)}% · {formatBytes(st.usage.mem)}
           </span>
         )}
         {errors > 0 && !live && <span className="text-red-400/80">{errors} errors</span>}
-        <div className="nodrag ml-auto flex items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
-          {live ? (
-            <Tip label="Stop">
-              <IconButton
-                icon={Square}
-                size={12}
-                label="Stop"
-                onClick={(e) => (e.stopPropagation(), serviceAction(id, 'stop'))}
-                disabled={status === 'stopping'}
-              />
-            </Tip>
-          ) : (
-            <Tip label="Start (with dependencies)">
-              <IconButton
-                icon={Play}
-                size={13}
-                label="Start (with dependencies)"
-                onClick={(e) => (e.stopPropagation(), serviceAction(id, 'start'))}
-                className="hover:text-emerald-300"
-              />
+        <div className="nodrag ml-auto flex shrink-0 items-center gap-1.5">
+          {live && (
+            <Tip label="Restart">
+              <button
+                aria-label="Restart"
+                onClick={(e) => (e.stopPropagation(), serviceAction(id, 'restart'))}
+                className="inline-flex size-6 items-center justify-center rounded-md border border-line text-muted transition-colors hover:border-warn/40 hover:bg-warn/10 hover:text-amber-300"
+              >
+                <RotateCw size={11} strokeWidth={2} />
+              </button>
             </Tip>
           )}
-          <Tip label={live ? 'Restart' : 'Restart (not running)'}>
-            <IconButton icon={RotateCw} size={12} label="Restart" disabled={!live} onClick={(e) => (e.stopPropagation(), serviceAction(id, 'restart'))} />
-          </Tip>
+          {live ? (
+            <button
+              onClick={(e) => (e.stopPropagation(), serviceAction(id, 'stop'))}
+              disabled={status === 'stopping'}
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-line px-2 font-medium text-muted transition-colors hover:border-bad/40 hover:bg-bad/10 hover:text-red-300 disabled:opacity-40"
+            >
+              <Square size={9} strokeWidth={2.5} />
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={(e) => (e.stopPropagation(), serviceAction(id, 'start'))}
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 font-medium text-emerald-300 transition-colors hover:border-emerald-400/50 hover:bg-emerald-500/20"
+            >
+              <Play size={10} strokeWidth={2.5} className="fill-current" />
+              Start
+            </button>
+          )}
         </div>
       </div>
       <Handle type="source" position={Position.Right} />
