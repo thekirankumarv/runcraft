@@ -196,6 +196,7 @@ export function handleMessages(msgs: any[]) {
   let config: ProjectConfig | undefined
   let local: LocalConfig | undefined
   const traffic: Record<string, TrafficEntry[]> = {}
+  const resetTraffic = new Set<string>()
   for (const m of msgs) {
     if (m.project !== pid) {
       if (m.type === 'status') loadProjects()
@@ -210,7 +211,10 @@ export function handleMessages(msgs: any[]) {
         const title = m.service.exitCode === undefined ? `${svcName(m.service.id)} couldn't start` : `${svcName(m.service.id)} crashed`
         notify(m.service.id, title, last?.text.replace(/\x1b\[[0-9;]*m/g, '') ?? `Exited with code ${m.service.exitCode}`)
       }
-      if (m.service.status === 'starting' && prev?.status !== 'starting') traffic[m.service.id] = []
+      if (m.service.status === 'starting' && prev?.status !== 'starting') {
+        resetTraffic.add(m.service.id)
+        traffic[m.service.id] = []
+      }
       services[m.service.id] = { usage: prev?.usage, overrides: prev?.overrides, ...m.service }
     } else if (m.type === 'stats') Object.assign(usage, m.data)
     else if (m.type === 'config' && m.from !== clientId) config = m.config
@@ -230,8 +234,12 @@ export function handleMessages(msgs: any[]) {
       history[id] = [...(history[id] ?? []), u.cpu].slice(-HISTORY)
     }
     const nextTraffic = { ...s.traffic }
-    for (const [id, entries] of Object.entries(traffic))
-      if (nextTraffic[id]) nextTraffic[id] = entries.length ? [...nextTraffic[id], ...entries].slice(-300) : []
+    for (const [id, entries] of Object.entries(traffic)) {
+      if (!nextTraffic[id]) continue
+      const kept = resetTraffic.has(id) ? [] : nextTraffic[id]
+      const last = kept.at(-1)?.seq ?? 0
+      nextTraffic[id] = [...kept, ...entries.filter((e) => e.seq > last)].slice(-300)
+    }
     return { logs: nextLogs, traffic: nextTraffic, services: nextServices, history, ...(config ? { config } : {}), ...(local ? { local } : {}) }
   })
 }

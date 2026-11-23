@@ -77,16 +77,20 @@ const startProject = dirArg ? expand(dirArg) : looksLikeProject(process.cwd()) ?
 if (startProject) addProject(startProject)
 
 const sockets = new Set<WebSocket>()
-let queue: unknown[] = []
+const phoneSockets = new Set<WebSocket>()
+const PHONE_MESSAGES = new Set(['status', 'log', 'stats'])
+let queue: Record<string, unknown>[] = []
 
 // Batches messages so chatty services don't flood the socket.
 function broadcast(msg: Record<string, unknown>) {
-  if (!sockets.size) return
+  if (!sockets.size && !phoneSockets.size) return
   if (!queue.length) {
     setTimeout(() => {
       const data = JSON.stringify(queue)
+      const forPhone = phoneSockets.size ? JSON.stringify(queue.filter((m) => PHONE_MESSAGES.has(m.type as string))) : ''
       queue = []
       for (const ws of sockets) ws.send(data)
+      if (forPhone !== '[]') for (const ws of phoneSockets) ws.send(forPhone)
     }, 40)
   }
   queue.push(msg)
@@ -154,6 +158,7 @@ route('DELETE', '/api/projects/:pid', async ({ params }) => {
     await p.stopMany()
     p.close()
   }
+  for (const t of terminals.values()) if (t.pid === params.pid) t.term.kill()
   open.delete(params.pid)
   saveProjects(listProjects().filter((e) => projectId(e.root) !== params.pid))
   return { ok: true }
@@ -428,7 +433,8 @@ async function dispatch(req: http.IncomingMessage, res: http.ServerResponse, url
 // Phone view: an opt-in second listener on the LAN with its own token and a small allowlist (no terminals, git, env or proxy).
 const PHONE_ROUTES = [/^GET \/api\/projects$/, /^GET \/api\/p\/[^/]+$/, /^GET \/api\/p\/[^/]+\/logs$/, /^POST \/api\/p\/[^/]+\/s\/[^/]+\/(start|stop|restart)$/]
 const PHONE_PAGE = path.join(import.meta.dirname, 'phone.html')
-let phone: { server: http.Server; token: string; url: string; sockets: Set<WebSocket> } | undefined
+let phone: { server: http.Server; token: string; url: string } | undefined
+let phoneStarting: Promise<unknown> | undefined
 
 function lanAddress() {
   const all = Object.entries(os.networkInterfaces()).flatMap(([name, list]) => (list ?? []).map((a) => ({ ...a, name })))
@@ -467,16 +473,15 @@ function startPhone(): Promise<typeof phone> {
     const url = new URL(req.url ?? '/', 'http://x')
     if (url.pathname !== '/ws' || !phoneTrusted(req, url)) return socket.destroy()
     wss.handleUpgrade(req, socket, head, (ws) => {
-      sockets.add(ws)
-      phone?.sockets.add(ws)
-      ws.on('close', () => sockets.delete(ws))
+      phoneSockets.add(ws)
+      ws.on('close', () => phoneSockets.delete(ws))
     })
   })
   return new Promise((resolve, reject) => {
     s.once('error', reject)
     s.listen(0, '0.0.0.0', () => {
       const { port } = s.address() as { port: number }
-      phone = { server: s, token, url: `http://${ip}:${port}/?t=${token}`, sockets: new Set() }
+      phone = { server: s, token, url: `http://${ip}:${port}/?t=${token}` }
       resolve(phone)
     })
   })
@@ -485,9 +490,9 @@ function startPhone(): Promise<typeof phone> {
 route('GET', '/api/phone', () => ({ on: !!phone, url: phone?.url }))
 
 route('POST', '/api/phone', async ({ body }) => {
-  if (body.on && !phone) await startPhone()
+  if (body.on && !phone) await (phoneStarting ??= startPhone().finally(() => (phoneStarting = undefined)))
   if (!body.on && phone) {
-    for (const ws of phone.sockets) ws.terminate()
+    for (const ws of phoneSockets) ws.terminate()
     phone.server.closeAllConnections()
     phone.server.close()
     phone = undefined
