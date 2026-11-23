@@ -77,6 +77,7 @@ const LineText = memo(function LineText({ text, query, cwd }: { text: string; qu
 
 function Row({
   line,
+  svc,
   query,
   cwd,
   showTime,
@@ -86,6 +87,7 @@ function Row({
   onToggle,
 }: {
   line: LogLine
+  svc?: { name: string; color?: string }
   query: string
   cwd: string
   showTime: boolean
@@ -98,6 +100,11 @@ function Row({
   return (
     <div className={cx('flex gap-3 border-l-2 px-3 py-[1.5px] hover:bg-hover/50', tone)}>
       {showTime && <span className="shrink-0 select-none text-faint/70 tabular-nums">{formatTime(line.t)}</span>}
+      {svc && (
+        <span className="w-24 shrink-0 select-none truncate font-sans text-[11px] font-medium" style={{ color: svc.color ?? 'var(--color-violet-300)' }}>
+          {svc.name}
+        </span>
+      )}
       <span className={cx('min-w-0 flex-1', wrap ? 'whitespace-pre-wrap break-words' : 'whitespace-pre', line.s === 'sys' && 'italic text-violet-300/80')}>
         {line.s === 'sys' && <span className="mr-1.5 not-italic text-violet-400/60">›</span>}
         <LineText text={line.text} query={query} cwd={cwd} />
@@ -115,9 +122,20 @@ function Row({
   )
 }
 
-export default function LogView({ id }: { id: string }) {
-  const lines = useStore((s) => s.logs[id]) ?? []
-  const cwd = useStore((s) => s.services[id]?.cwd ?? '')
+type Tagged = Block & { svc?: string }
+
+// Without an id, shows every service's logs merged by time.
+export default function LogView({ id }: { id?: string }) {
+  const own = useStore((s) => (id ? s.logs[id] : undefined))
+  const all = useStore((s) => (id ? undefined : s.logs))
+  const states = useStore((s) => s.services)
+  const config = useStore((s) => s.config)
+  const lines = useMemo(() => (id ? (own ?? []) : Object.values(all ?? {}).flat()), [id, own, all])
+  const cwdOf = (svc?: string) => states[svc ?? id ?? '']?.cwd ?? ''
+  const svcInfo = (svc?: string) => {
+    const c = svc ? config?.services.find((x) => x.id === svc) : undefined
+    return svc ? { name: c?.name ?? svc, color: c?.color } : undefined
+  }
   const initialFilter = useStore((s) => s.logFilter)
   const [filter, setFilter] = useState<Filter>(initialFilter ?? 'all')
   const [query, setQuery] = useState('')
@@ -140,21 +158,25 @@ export default function LogView({ id }: { id: string }) {
 
   const q = query.trim().toLowerCase()
   const blocks = useMemo(() => {
-    const all = toBlocks(lines)
-    return all.filter((b) => {
+    const tagged: Tagged[] = id
+      ? toBlocks(lines)
+      : Object.entries(all ?? {})
+          .flatMap(([svc, ls], i) => toBlocks(ls).map((b) => ({ ...b, key: i * 1_000_000_000 + b.key, svc })))
+          .sort((a, b) => a.head.t - b.head.t)
+    return tagged.filter((b) => {
       if (filter !== 'all' && b.head.lvl !== filter) return false
       if (q && ![b.head, ...b.frames].some((l) => stripAnsi(l.text).toLowerCase().includes(q))) return false
       return true
     })
-  }, [lines, filter, q])
+  }, [id, lines, all, filter, q])
 
-  type Item = { line: LogLine; block?: Block; frameOf?: number }
+  type Item = { line: LogLine; block?: Block; frameOf?: number; svc?: string }
   const items = useMemo(() => {
     const out: Item[] = []
     for (const b of blocks) {
-      out.push({ line: b.head, block: b })
+      out.push({ line: b.head, block: b, svc: b.svc })
       if (expanded.has(b.key) || (q && b.frames.some((f) => stripAnsi(f.text).toLowerCase().includes(q))))
-        for (const f of b.frames) out.push({ line: f, frameOf: b.key })
+        for (const f of b.frames) out.push({ line: f, frameOf: b.key, svc: b.svc })
     }
     return out
   }, [blocks, expanded, q])
@@ -164,7 +186,7 @@ export default function LogView({ id }: { id: string }) {
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 20,
     overscan: 30,
-    getItemKey: (i) => items[i].line.seq,
+    getItemKey: (i) => `${items[i].svc ?? ''}:${items[i].line.seq}`,
   })
 
   useEffect(() => {
@@ -208,7 +230,7 @@ export default function LogView({ id }: { id: string }) {
           <IconButton icon={Clock} label="Timestamps" active={showTime} onClick={() => setShowTime(!showTime)} />
           <IconButton icon={WrapText} label="Wrap lines" active={wrap} onClick={() => setWrap(!wrap)} />
           <IconButton icon={Copy} label="Copy visible logs" onClick={copy} />
-          <IconButton icon={Trash2} label="Clear logs" onClick={() => serviceAction(id, 'clear')} />
+          <IconButton icon={Trash2} label="Clear logs" onClick={() => (id ? [id] : Object.keys(all ?? {})).forEach((sid) => serviceAction(sid, 'clear'))} />
         </div>
       </div>
       <div className="flex items-center gap-1 border-b border-line px-3 py-1.5">
@@ -233,7 +255,11 @@ export default function LogView({ id }: { id: string }) {
         <div ref={scrollRef} onScroll={onScroll} className="absolute inset-0 overflow-auto bg-term py-2 font-mono text-[11.5px] leading-[1.6] text-term-fg">
           {!items.length && (
             <div className="p-6 text-center font-sans text-xs text-faint">
-              {lines.length ? 'No lines match your filters.' : 'No output yet. Start the service to see its logs here.'}
+              {lines.length
+                ? 'No lines match your filters.'
+                : id
+                  ? 'No output yet. Start the service to see its logs here.'
+                  : 'No output yet. Start a service to see its logs here.'}
             </div>
           )}
           <div style={{ height: virtual.getTotalSize(), position: 'relative' }}>
@@ -251,7 +277,8 @@ export default function LogView({ id }: { id: string }) {
                     <Row
                       line={item.line}
                       query={q}
-                      cwd={cwd}
+                      cwd={cwdOf(item.svc)}
+                      svc={svcInfo(item.svc)}
                       showTime={showTime && !item.frameOf}
                       wrap={wrap}
                       frames={item.block?.frames.length}

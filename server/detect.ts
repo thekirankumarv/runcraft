@@ -30,7 +30,7 @@ const readText = (file: string) => {
   }
 }
 
-function packageManager(root: string, dir: string) {
+export function packageManager(root: string, dir: string) {
   for (let d = dir; ; d = path.dirname(d)) {
     if (fs.existsSync(path.join(d, 'pnpm-lock.yaml'))) return 'pnpm'
     if (fs.existsSync(path.join(d, 'bun.lockb')) || fs.existsSync(path.join(d, 'bun.lock'))) return 'bun run'

@@ -1,4 +1,4 @@
-import { Eye, EyeOff, FileText, Plus, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, FileText, Lock, Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
@@ -39,6 +39,7 @@ export default function EnvTable({ id }: { id: string }) {
   const envFile = useStore((s) => s.config?.services.find((x) => x.id === id)?.envFile)
   const [file, setFile] = useState<{ file?: string; exists: boolean; profile?: string; inherited?: Record<string, string> }>()
   const envProfile = useStore((s) => s.local.envProfile)
+  const locked = useStore((s) => !!envProfile && !!s.config?.lockedEnvs?.includes(envProfile))
   const root = useStore((s) => s.root)
   const [saved, setSaved] = useState<Row[]>([])
   const [rows, setRows] = useState<Row[]>([])
@@ -85,6 +86,7 @@ export default function EnvTable({ id }: { id: string }) {
     }
   }
 
+  const missing = (st?.missingEnv ?? []).filter((k) => !rows.some((r) => r.key === k))
   const edit = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
   return (
@@ -122,12 +124,33 @@ export default function EnvTable({ id }: { id: string }) {
           <textarea
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
+            readOnly={locked}
             spellCheck={false}
             placeholder={'KEY=value\nOTHER_KEY="with spaces"'}
             className="h-full min-h-64 w-full resize-none bg-transparent p-4 font-mono text-[12px] leading-relaxed text-fg outline-none placeholder:text-faint"
           />
         ) : (
-          <div className="p-2">
+          <fieldset disabled={locked} className="p-2">
+            {locked && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2 text-[12px] text-red-300">
+                <Lock size={13} className="shrink-0" />
+                The {envProfile} profile is locked. Values are read-only. Unlock it in Settings to edit.
+              </div>
+            )}
+            {!locked && missing.length > 0 && (
+              <div className="mb-2 flex items-start gap-2 rounded-lg border border-warn/25 bg-warn/10 px-3 py-2 text-[12px] text-amber-300">
+                <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  In .env.example but not set: <span className="font-mono">{missing.join(', ')}</span>
+                </span>
+                <button
+                  onClick={() => setRows((rs) => [...rs, ...missing.map((key) => ({ key, value: '' }))])}
+                  className="shrink-0 font-medium hover:underline"
+                >
+                  Add {missing.length === 1 ? 'it' : 'them'}
+                </button>
+              </div>
+            )}
             <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] gap-x-1 px-2 pb-1.5 pt-1 text-[11px] font-medium text-faint">
               <span>Key</span>
               <span>Value</span>
@@ -197,13 +220,14 @@ export default function EnvTable({ id }: { id: string }) {
                   </div>
                 ))}
             <button
+              hidden={locked}
               onClick={() => setRows((rs) => [...rs, { key: '', value: '' }])}
               className="mt-1 flex h-8 w-full items-center gap-1.5 rounded-lg px-2.5 text-xs text-faint hover:bg-hover hover:text-fg"
             >
               <Plus size={13} /> Add variable
             </button>
-            {!rows.length && <p className="px-2.5 pt-2 text-[11px] text-faint">No variables yet. Paste a whole .env in Raw mode to import it.</p>}
-          </div>
+            {!rows.length && !locked && <p className="px-2.5 pt-2 text-[11px] text-faint">No variables yet. Paste a whole .env in Raw mode to import it.</p>}
+          </fieldset>
         )}
       </div>
 

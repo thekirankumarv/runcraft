@@ -35,7 +35,7 @@
   "packageManager": "pnpm@10.28.1",
   "scripts": {
     "dev": "node --watch-path=server server/index.ts --dev --port 4950 --no-open & vite",
-    "build": "vite build && tsc -p tsconfig.server.json",
+    "build": "vite build && tsc -p tsconfig.server.json && node -e \"for (const f of ['hook.cjs', 'phone.html']) require('fs').copyFileSync('server/' + f, 'dist/server/' + f)\"",
     "start": "node dist/server/index.js",
     "test": "node --test server/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.server.json && tsc --noEmit -p tsconfig.json",
@@ -44,6 +44,7 @@
     "lint": "prettier --check . && pnpm typecheck"
   },
   "dependencies": {
+    "@lydell/node-pty": "1.2.0-beta.18",
     "ws": "^8.23.0"
   },
   "devDependencies": {
@@ -58,6 +59,8 @@
     "@types/react-dom": "^19.3.0",
     "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^6.3.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.12.1",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.77.0",
@@ -68,6 +71,7 @@
     "sonner": "^2.0.8",
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
+    "uqr": "0.1.3",
     "vite": "^8.3.8",
     "zustand": "^5.1.0"
   },

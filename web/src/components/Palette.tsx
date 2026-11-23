@@ -14,11 +14,12 @@ import {
   ScrollText,
   Settings,
   Square,
+  SquareTerminal,
   Sun,
   Workflow,
 } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
-import { isLive, openProject, saveLocal, select, serviceAction, startServices, stopServices, useStore, type View } from '../lib/store'
+import { isLive, openProject, openTerminal, saveLocal, select, serviceAction, startServices, stopServices, useStore, type View } from '../lib/store'
 import { setTheme, useTheme } from '../lib/theme'
 import { arrange } from './Canvas'
 import { ServiceIcon } from './ui'
@@ -110,6 +111,14 @@ export default function Palette() {
                       Restart {s.name}
                     </Item>
                   ),
+                  <Item
+                    key={`${s.id}-term`}
+                    icon={<SquareTerminal size={14} />}
+                    keywords={[s.id, 'shell']}
+                    onSelect={() => openTerminal({ title: s.name, cwd: s.cwd })}
+                  >
+                    Open terminal: {s.name}
+                  </Item>,
                   <Item key={`${s.id}-l`} icon={<ScrollText size={14} />} keywords={[s.id, 'logs']} onSelect={() => select(s.id, 'logs')}>
                     Open logs: {s.name}
                   </Item>,
@@ -123,6 +132,12 @@ export default function Palette() {
             </Item>
             <Item icon={<LayoutDashboard size={14} />} onSelect={() => go('overview')}>
               Overview
+            </Item>
+            <Item icon={<SquareTerminal size={14} />} onSelect={() => go('terminal')}>
+              Terminal
+            </Item>
+            <Item icon={<ScrollText size={14} />} keywords={['all logs', 'stream']} onSelect={() => go('logs')}>
+              Logs
             </Item>
             <Item icon={<AlertCircle size={14} />} onSelect={() => go('problems')}>
               Problems
@@ -140,6 +155,9 @@ export default function Palette() {
           <Command.Group heading="Actions">
             <Item icon={<Plus size={14} />} onSelect={() => useStore.setState({ dialog: 'add', view: 'canvas' })}>
               Add service
+            </Item>
+            <Item icon={<SquareTerminal size={14} />} keywords={['shell', 'console']} onSelect={() => openTerminal()}>
+              New terminal
             </Item>
             <Item icon={<LayoutGrid size={14} />} onSelect={arrange}>
               Auto-arrange canvas

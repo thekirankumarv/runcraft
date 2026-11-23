@@ -9,11 +9,14 @@ import {
   LayoutDashboard,
   Layers,
   ListChecks,
+  Lock,
   Network,
   Play,
   Plug,
+  ScrollText,
   Settings,
   Square,
+  SquareTerminal,
   Trash2,
   Upload,
   Workflow,
@@ -35,6 +38,7 @@ import {
   useStore,
   type View,
 } from '../lib/store'
+import PhoneAccess from './PhoneAccess'
 import { Button, cx, Dialog, Kbd, Menu, MenuItem, MenuLabel, MenuSeparator, ServiceIcon } from './ui'
 
 function ProjectMenu() {
@@ -303,6 +307,7 @@ export function ChooseDialog() {
 function EnvSwitch() {
   const envProfiles = useStore((s) => s.config?.envProfiles) ?? []
   const active = useStore((s) => s.local.envProfile)
+  const locked = useStore((s) => s.config?.lockedEnvs) ?? []
   if (!envProfiles.length) return null
   return (
     <Menu
@@ -312,10 +317,14 @@ function EnvSwitch() {
         <button
           className={cx(
             'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors',
-            active ? 'border-accent/40 bg-accent-soft text-violet-200' : 'border-line bg-panel text-muted hover:text-fg',
+            active && locked.includes(active)
+              ? 'border-bad/50 bg-bad/15 text-red-300'
+              : active
+                ? 'border-accent/40 bg-accent-soft text-violet-200'
+                : 'border-line bg-panel text-muted hover:text-fg',
           )}
         >
-          <KeyRound size={12} />
+          {active && locked.includes(active) ? <Lock size={12} /> : <KeyRound size={12} />}
           {active ?? 'default'}
           <ChevronDown size={12} className="text-faint" />
         </button>
@@ -328,7 +337,7 @@ function EnvSwitch() {
             <MenuItem
               key={p ?? ''}
               icon={active === p ? Check : undefined}
-              hint={p ? `.env.${p}` : '.env'}
+              hint={p && locked.includes(p) ? <Lock size={11} className="text-red-300" /> : p ? `.env.${p}` : '.env'}
               onClick={() => (close(), saveLocal({ envProfile: p ?? '' }))}
             >
               {p ?? 'default'}
@@ -347,6 +356,8 @@ function EnvSwitch() {
 const VIEWS: { value: View; label: string; icon: typeof Workflow }[] = [
   { value: 'canvas', label: 'Canvas', icon: Workflow },
   { value: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { value: 'terminal', label: 'Terminal', icon: SquareTerminal },
+  { value: 'logs', label: 'Logs', icon: ScrollText },
   { value: 'problems', label: 'Problems', icon: AlertCircle },
   { value: 'git', label: 'Changes', icon: GitBranch },
   { value: 'ports', label: 'Ports', icon: Plug },
@@ -358,9 +369,9 @@ export default function TopBar({ problemCount, changeCount }: { problemCount: nu
   const connected = useStore((s) => s.connected)
   const counts: Partial<Record<View, number>> = { problems: problemCount, git: changeCount }
   return (
-    <header className="relative z-20 flex h-12 shrink-0 items-center gap-2 border-b border-line bg-panel/80 px-3 backdrop-blur">
+    <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-line bg-panel/80 px-4 backdrop-blur">
       <div className="flex items-center gap-1.5 pr-1">
-        <img src="/favicon.svg" alt="" className="size-6" />
+        <img src="/favicon.svg" alt="" className="size-7" />
         <span className="text-faint">/</span>
       </div>
       <ProjectMenu />
@@ -370,14 +381,14 @@ export default function TopBar({ problemCount, changeCount }: { problemCount: nu
             key={v.value}
             onClick={() => useStore.setState({ view: v.value })}
             className={cx(
-              'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium transition-colors',
+              'inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[13.5px] font-medium transition-colors',
               view === v.value ? 'bg-hover text-fg' : 'text-faint hover:text-muted',
             )}
           >
-            <v.icon size={14} />
+            <v.icon size={15} />
             <span className="hidden lg:inline">{v.label}</span>
             {!!counts[v.value] && (
-              <span className={cx('rounded-full px-1.5 text-[10px] tabular-nums', v.value === 'problems' ? 'bg-bad/15 text-red-300' : 'bg-hover text-muted')}>
+              <span className={cx('rounded-full px-1.5 text-[11px] tabular-nums', v.value === 'problems' ? 'bg-bad/15 text-red-300' : 'bg-hover text-muted')}>
                 {counts[v.value]}
               </span>
             )}
@@ -387,9 +398,10 @@ export default function TopBar({ problemCount, changeCount }: { problemCount: nu
       <div className="ml-auto flex items-center gap-2">
         {!connected && <span className="text-[11px] text-amber-300">Reconnecting…</span>}
         <EnvSwitch />
+        <PhoneAccess />
         <button
           onClick={() => useStore.setState({ dialog: 'palette' })}
-          className="hidden h-8 items-center gap-2 rounded-lg border border-line bg-panel px-2.5 text-xs text-faint hover:text-muted md:flex"
+          className="hidden h-9 items-center gap-2 rounded-lg border border-line bg-panel px-3 text-[12.5px] text-faint hover:text-muted md:flex"
         >
           Search commands <Kbd>⌘</Kbd>
           <Kbd>K</Kbd>

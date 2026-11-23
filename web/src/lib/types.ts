@@ -1,4 +1,4 @@
-export type { Health, Level, LocalConfig, LogLine, ProjectConfig, SavedRequest, ServiceConfig, Status } from '../../../server/types.ts'
+export type { Health, Level, LocalConfig, LogLine, ProjectConfig, SavedRequest, ServiceConfig, Status, TrafficEntry } from '../../../server/types.ts'
 import type { Status } from '../../../server/types.ts'
 
 export interface Usage {
@@ -17,6 +17,7 @@ export interface ServiceState {
   overrides?: string[]
   needsRestart: boolean
   conflict?: { port: number; pid?: number; command?: string }
+  missingEnv?: string[]
   cwd: string
   usage?: Usage
 }

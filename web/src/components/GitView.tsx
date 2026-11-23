@@ -1,5 +1,5 @@
 import { DiffEditor, loader, type MonacoDiffEditor } from '@monaco-editor/react'
-import { Code2, FileDiff, GitBranch, RefreshCw, Save } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ChevronDown, Code2, FileDiff, GitBranch, GitCommitHorizontal, RefreshCw, Save, UploadCloud } from 'lucide-react'
 import * as monaco from 'monaco-editor/editor/editor.api'
 import 'monaco-editor/basic-languages/monaco.contribution'
 import 'monaco-editor/features/codicon/register'
@@ -10,7 +10,7 @@ import { api } from '../lib/api'
 import { editorUrl, fail, useStore } from '../lib/store'
 import { useTheme } from '../lib/theme'
 import type { GitFile } from '../lib/types'
-import { Button, cx, Empty, IconButton, Segmented, Toggle } from './ui'
+import { Button, cx, Empty, IconButton, Menu, MenuItem, Segmented, Toggle } from './ui'
 
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() }
 loader.config({ monaco })
@@ -109,6 +109,57 @@ interface Status {
   root: string | null
   branch?: string
   files: GitFile[]
+  upstream?: boolean
+  ahead?: number
+  behind?: number
+}
+
+function BranchMenu({ pid, branch, onSwitched }: { pid: string; branch?: string; onSwitched: () => void }) {
+  const [branches, setBranches] = useState<string[]>([])
+  return (
+    <Menu
+      width="w-72"
+      trigger={(open) => (
+        <button
+          title={branch}
+          onClick={() => !open && api<string[]>('GET', `/api/p/${pid}/git/branches`).then(setBranches, fail)}
+          className={cx(
+            'flex min-w-0 max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 font-mono text-xs transition-colors',
+            open ? 'bg-hover text-fg' : 'hover:bg-hover',
+          )}
+        >
+          <GitBranch size={14} className="shrink-0 text-faint" />
+          <span className="truncate">{branch}</span>
+          <ChevronDown size={12} className="shrink-0 text-faint" />
+        </button>
+      )}
+    >
+      {(close) => (
+        <div className="max-h-80 overflow-y-auto">
+          <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium text-faint">Switch branch</div>
+          {branches.map((b) => (
+            <MenuItem
+              key={b}
+              icon={b === branch ? Check : GitBranch}
+              onClick={async () => {
+                close()
+                if (b === branch) return
+                try {
+                  await api('POST', `/api/p/${pid}/git/switch`, { branch: b })
+                  toast.success(`Switched to ${b}`)
+                  onSwitched()
+                } catch (e) {
+                  fail(e)
+                }
+              }}
+            >
+              <span className="font-mono text-[12px]">{b}</span>
+            </MenuItem>
+          ))}
+        </div>
+      )}
+    </Menu>
+  )
 }
 
 export default function GitView() {
@@ -127,6 +178,48 @@ export default function GitView() {
   const diskRef = useRef('')
 
   const refresh = useCallback(() => api<Status>('GET', `/api/p/${pid}/git`).then(setStatus, fail), [pid])
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState<'commit' | 'push' | 'pull'>()
+
+  const stage = async (paths: string[], staged: boolean) => {
+    await api('POST', `/api/p/${pid}/git/stage`, { files: paths, staged }).catch(fail)
+    refresh()
+  }
+  const commit = async () => {
+    const all = !status?.files.some((f) => f.staged)
+    setBusy('commit')
+    try {
+      await api('POST', `/api/p/${pid}/git/commit`, { message, all })
+      toast.success('Committed')
+      setMessage('')
+      refresh()
+    } catch (e) {
+      fail(e)
+    }
+    setBusy(undefined)
+  }
+  const pull = async () => {
+    setBusy('pull')
+    try {
+      await api('POST', `/api/p/${pid}/git/pull`)
+      toast.success('Pulled')
+      refresh()
+    } catch (e) {
+      fail(e)
+    }
+    setBusy(undefined)
+  }
+  const push = async () => {
+    setBusy('push')
+    try {
+      await api('POST', `/api/p/${pid}/git/push`, { upstream: status?.upstream })
+      toast.success(status?.upstream ? 'Pushed' : 'Branch published')
+      refresh()
+    } catch (e) {
+      fail(e)
+    }
+    setBusy(undefined)
+  }
 
   const loadDiff = useCallback(
     async (path: string) => {
@@ -144,7 +237,7 @@ export default function GitView() {
   }, [refresh])
 
   useEffect(() => {
-    if (!selected && status?.files.length) setSelected(status.files[0].path)
+    if (status && !status.files.some((f) => f.path === selected)) setSelected(status.files[0]?.path)
   }, [status, selected])
 
   // Re-read the open file on each poll so edits made elsewhere show up, unless there is an unsaved draft.
@@ -200,12 +293,33 @@ export default function GitView() {
   return (
     <div className="flex h-full min-h-0">
       <aside className="flex w-80 shrink-0 flex-col border-r border-line bg-panel">
-        <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
-          <GitBranch size={14} className="text-faint" />
-          <span className="truncate font-mono text-xs">{status?.branch}</span>
-          <span className="ml-auto text-[11px] text-faint">{files.length} changed</span>
+        <div className="flex items-center gap-1 border-b border-line px-2 py-2">
+          <div className="min-w-0">
+            <BranchMenu pid={pid!} branch={status?.branch} onSwitched={refresh} />
+          </div>
+          {!!status?.behind && <span className="shrink-0 font-mono text-[11px] text-sky-300">↓{status.behind}</span>}
+          <span className="ml-auto shrink-0 whitespace-nowrap pl-1 text-[11px] text-faint">{files.length} changed</span>
           <IconButton icon={RefreshCw} label="Refresh" onClick={refresh} />
         </div>
+        {files.length > 0 && (
+          <label className="flex items-center gap-2 border-b border-line px-3.5 py-1.5 text-[11px] text-faint">
+            <input
+              type="checkbox"
+              className="accent-violet-500"
+              checked={files.every((f) => f.staged)}
+              ref={(el) => {
+                if (el) el.indeterminate = files.some((f) => f.staged) && !files.every((f) => f.staged)
+              }}
+              onChange={(e) =>
+                stage(
+                  files.map((f) => f.path),
+                  e.target.checked,
+                )
+              }
+            />
+            {files.some((f) => f.staged) ? `${files.filter((f) => f.staged).length} staged` : 'Stage all'}
+          </label>
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
           {!files.length && status && <div className="p-6 text-center text-xs text-faint">Working tree clean.</div>}
           {files.map((f) => {
@@ -213,29 +327,67 @@ export default function GitView() {
             const dir = f.path.slice(0, -name!.length - 1)
             const s = STATUS_STYLE[f.status] ?? { label: f.status, cls: 'text-muted' }
             return (
-              <button
+              <div
                 key={f.path}
-                onClick={() => setSelected(f.path)}
-                title={`${s.label}: ${f.path}`}
-                className={cx(
-                  'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors',
-                  selected === f.path ? 'bg-hover' : 'hover:bg-hover/60',
-                )}
+                className={cx('flex items-center gap-2 rounded-lg pl-2 transition-colors', selected === f.path ? 'bg-hover' : 'hover:bg-hover/60')}
               >
-                <span className="min-w-0 flex-1 truncate text-[12.5px]">
-                  {name}
-                  {dir && <span className="ml-1.5 text-[11px] text-faint">{dir}</span>}
-                </span>
-                {drafts[f.path] !== undefined && <span className="size-1.5 rounded-full bg-violet-400" title="Unsaved" />}
-                {f.added != null && (
-                  <span className="font-mono text-[10.5px] tabular-nums">
-                    <span className="text-emerald-400/80">+{f.added}</span> <span className="text-red-400/80">−{f.removed}</span>
+                <input
+                  type="checkbox"
+                  aria-label={`Stage ${f.path}`}
+                  className="shrink-0 accent-violet-500"
+                  checked={f.staged}
+                  onChange={(e) => stage([f.path], e.target.checked)}
+                />
+                <button
+                  onClick={() => setSelected(f.path)}
+                  title={`${s.label}: ${f.path}`}
+                  className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-2.5 text-left"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[12.5px]">
+                    {name}
+                    {dir && <span className="ml-1.5 text-[11px] text-faint">{dir}</span>}
                   </span>
-                )}
-                <span className={cx('w-3 text-center font-mono text-[11px] font-bold', s.cls)}>{f.status}</span>
-              </button>
+                  {drafts[f.path] !== undefined && <span className="size-1.5 rounded-full bg-violet-400" title="Unsaved" />}
+                  {f.added != null && (
+                    <span className="font-mono text-[10.5px] tabular-nums">
+                      <span className="text-emerald-400/80">+{f.added}</span> <span className="text-red-400/80">−{f.removed}</span>
+                    </span>
+                  )}
+                  <span className={cx('w-3 text-center font-mono text-[11px] font-bold', s.cls)}>{f.status}</span>
+                </button>
+              </div>
             )
           })}
+        </div>
+        <div className="space-y-2 border-t border-line p-2.5">
+          {files.length > 0 && (
+            <>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === 'Enter' && message.trim() && commit()}
+                placeholder="Commit message"
+                rows={3}
+                className="w-full resize-none rounded-lg border border-line bg-bg px-2.5 py-2 text-[12.5px] text-fg outline-none transition-colors placeholder:text-faint focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
+              />
+              <Button variant="primary" className="w-full justify-center" disabled={!message.trim() || !!busy} onClick={commit}>
+                <GitCommitHorizontal size={14} />
+                {busy === 'commit' ? 'Committing…' : files.some((f) => f.staged) ? `Commit ${files.filter((f) => f.staged).length} staged` : 'Commit all'}
+              </Button>
+            </>
+          )}
+          {!!status?.behind && (
+            <Button className="w-full justify-center" disabled={!!busy} onClick={pull}>
+              <ArrowDown size={14} />
+              {busy === 'pull' ? 'Pulling…' : `Pull ${status.behind} commit${status.behind === 1 ? '' : 's'}`}
+            </Button>
+          )}
+          {status?.branch && status.branch !== 'HEAD' && (!status.upstream || !!status.ahead) && (
+            <Button className="w-full justify-center" disabled={!!busy} onClick={push}>
+              {status.upstream ? <ArrowUp size={14} /> : <UploadCloud size={14} />}
+              {busy === 'push' ? 'Pushing…' : status.upstream ? `Push ${status.ahead} commit${status.ahead === 1 ? '' : 's'}` : 'Publish branch'}
+            </Button>
+          )}
         </div>
       </aside>
 

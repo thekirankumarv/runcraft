@@ -141,8 +141,13 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   font-size: 13px;
-  -webkit-font-smoothing: antialiased;
   font-feature-settings: 'cv11', 'ss01';
+}
+
+@media (min-resolution: 2dppx) {
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 * {

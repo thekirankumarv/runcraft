@@ -1,4 +1,4 @@
-import { ArrowUpRight, Plug, RefreshCw } from 'lucide-react'
+import { ArrowUpRight, Plug, RefreshCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
@@ -92,9 +92,12 @@ export default function PortsView() {
                           </Button>
                         </span>
                       ) : (
-                        <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100" onClick={() => setConfirm(p.pid)}>
-                          Kill
-                        </Button>
+                        <button
+                          onClick={() => setConfirm(p.pid)}
+                          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] font-medium text-muted transition-colors hover:border-bad/40 hover:bg-bad/10 hover:text-red-300"
+                        >
+                          <X size={12} /> Kill
+                        </button>
                       )}
                     </td>
                   </tr>

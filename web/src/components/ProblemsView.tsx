@@ -58,6 +58,16 @@ export default function ProblemsView({ problems }: { problems: Problem[] }) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl space-y-6 p-6">
+        {byService.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-faint">
+              {problems.length} problems across {byService.length} services
+            </span>
+            <Button size="sm" className="ml-auto" onClick={() => byService.forEach(([id]) => serviceAction(id, 'clear'))}>
+              <Trash2 size={12} /> Clear all
+            </Button>
+          </div>
+        )}
         {byService.map(([id, list]) => {
           const cfg = config?.services.find((s) => s.id === id)
           return (

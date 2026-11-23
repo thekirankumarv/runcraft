@@ -3,11 +3,16 @@ import { EventEmitter } from 'node:events'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Readable } from 'node:stream'
+import { missingEnvKeys } from './env.ts'
 import { killTree, listeningPorts, portOpen, type Usage } from './system.ts'
-import type { Level, LogLine, ServiceConfig, Status } from './types.ts'
+import type { Level, LogLine, ServiceConfig, Status, TrafficEntry } from './types.ts'
 
 const MAX_LINES = 5000
 const READY_TIMEOUT = 120_000
+const MAX_TRAFFIC = 300
+const HOOK = path.join(import.meta.dirname, 'hook.cjs')
+
+export const trafficSink: { url?: string; token?: string } = {}
 
 const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g
 export const stripAnsi = (s: string) => s.replace(ANSI, '')
@@ -54,8 +59,11 @@ export class ServiceProcess extends EventEmitter {
   crashes = 0
   overrides: string[] = []
   logs: LogLine[] = []
+  traffic: TrafficEntry[] = []
+  projectId = ''
 
   private seq = 0
+  private trafficSeq = 0
   private launching = false
   private stopping = false
   private restarts = 0
@@ -98,6 +106,7 @@ export class ServiceProcess extends EventEmitter {
       crashes: this.crashes,
       needsRestart: this.needsRestart,
       conflict: this.conflict,
+      missingEnv: this.missingEnv(),
       cwd: this.cwd,
       overrides: this.overrides,
     }
@@ -131,14 +140,17 @@ export class ServiceProcess extends EventEmitter {
         return this.fail((e as Error).message)
       }
       const command = this.cfg.pre ? `${this.cfg.pre} && ${this.cfg.command}` : this.cfg.command
+      this.traffic = []
       this.sys(`$ ${command}`)
+      const missing = this.missingEnv()
+      if (missing.length) this.sys(`Missing env vars from .env.example: ${missing.join(', ')}`, 'warn')
       const child = spawn(command, {
         cwd,
         shell: true,
         detached: process.platform !== 'win32',
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
-        env: { ...process.env, FORCE_COLOR: '1', ...(port ? { PORT: String(port) } : {}), ...env },
+        env: this.hookEnv({ ...process.env, FORCE_COLOR: '1', ...(port ? { PORT: String(port) } : {}), ...env }),
       })
       this.child = child
       this.startedAt = Date.now()
@@ -193,6 +205,14 @@ export class ServiceProcess extends EventEmitter {
     })
   }
 
+  missingEnv() {
+    try {
+      return missingEnvKeys(this.cwd, this.env())
+    } catch {
+      return []
+    }
+  }
+
   markRestart() {
     if (!this.child || this.needsRestart) return
     this.needsRestart = true
@@ -201,6 +221,23 @@ export class ServiceProcess extends EventEmitter {
 
   clearLogs() {
     this.logs = []
+  }
+
+  addTraffic(entries: Omit<TrafficEntry, 'seq'>[]) {
+    const added = entries.map((e) => ({ ...e, seq: ++this.trafficSeq }))
+    this.traffic = [...this.traffic, ...added].slice(-MAX_TRAFFIC)
+    this.emit('traffic', added)
+  }
+
+  private hookEnv(env: NodeJS.ProcessEnv) {
+    const { url, token } = trafficSink
+    if (!url || !token || !fs.existsSync(HOOK)) return env
+    return {
+      ...env,
+      NODE_OPTIONS: [env.NODE_OPTIONS, `--require ${JSON.stringify(HOOK.replace(/\\/g, '/'))}`].filter(Boolean).join(' '),
+      RUNCRAFT_TRAFFIC: `${url}/api/p/${this.projectId}/s/${encodeURIComponent(this.cfg.id)}/traffic`,
+      RUNCRAFT_TOKEN: token,
+    }
   }
 
   sys(text: string, lvl: Level = 'info') {

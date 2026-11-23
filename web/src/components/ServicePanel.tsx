@@ -1,14 +1,15 @@
-import { ArrowUpRight, BookmarkPlus, Code2, Play, RotateCw, Square, Trash2, X } from 'lucide-react'
+import { ArrowUpRight, BookmarkPlus, Code2, Play, RotateCw, Square, SquareTerminal, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../lib/api'
 import { useEffect, useState } from 'react'
 import { countErrors } from '../lib/logs'
-import { editorUrl, fail, isLive, removeService, select, serviceAction, updateService, useStore, type Tab } from '../lib/store'
+import { editorUrl, fail, isLive, openTerminal, removeService, select, serviceAction, updateService, useStore, type Tab } from '../lib/store'
 import type { ServiceConfig } from '../lib/types'
 import EnvTable from './EnvTable'
 import HttpClient from './HttpClient'
 import LogView from './LogView'
 import ServiceForm, { cleanService } from './ServiceForm'
+import TrafficView from './TrafficView'
 import { Button, cx, IconButton, ServiceIcon, StatusPill } from './ui'
 
 function Settings({ id }: { id: string }) {
@@ -77,6 +78,7 @@ function Settings({ id }: { id: string }) {
 const TABS: { value: Tab; label: string }[] = [
   { value: 'logs', label: 'Logs' },
   { value: 'env', label: 'Variables' },
+  { value: 'traffic', label: 'Traffic' },
   { value: 'http', label: 'HTTP' },
   { value: 'settings', label: 'Settings' },
 ]
@@ -145,8 +147,11 @@ export default function ServicePanel({ id }: { id: string }) {
               </Button>
             </a>
           )}
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => openTerminal({ title: cfg.name, cwd: cfg.cwd })}>
+            <SquareTerminal size={12} /> Terminal
+          </Button>
           {st?.cwd && (
-            <a href={editorUrl(st.cwd)} className="ml-auto">
+            <a href={editorUrl(st.cwd)}>
               <Button size="sm" variant="ghost">
                 <Code2 size={12} /> Open folder
               </Button>
@@ -171,6 +176,7 @@ export default function ServicePanel({ id }: { id: string }) {
       <div className="min-h-0 flex-1">
         {tab === 'logs' && <LogView id={id} />}
         {tab === 'env' && <EnvTable id={id} />}
+        {tab === 'traffic' && <TrafficView id={id} />}
         {tab === 'http' && <HttpClient id={id} />}
         {tab === 'settings' && <Settings id={id} />}
       </div>
