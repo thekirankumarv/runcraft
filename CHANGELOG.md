@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0
+
+- Terminal view with tabs: open shells in the project folder without leaving Runcraft (adds `@lydell/node-pty`)
+- Terminals survive page reloads, open in a service's folder, run `package.json` scripts, and toggle with Ctrl+`
+- Traffic tab: see the HTTP requests a Node service receives, with headers and bodies, and replay them
+- Phone view: scan a QR code to watch and control services from a phone on the same Wi-Fi
+- Commit, push, pull and switch branches from Changes, with a background fetch
+- Logs view with every service's output in one stream
+- Warns when a service is missing variables listed in its `.env.example`
+- Lock an environment profile such as `prod` to make its values read-only
+- Run script also lists each service folder's `package.json` scripts
+- Lock the canvas layout so nodes can't be moved by accident
+- Clear all in Problems
+- Clearer Start, Stop and Restart buttons on canvas nodes
+- Full branch name on hover in Changes
+- Fix a blank page when opening a project that has no `runcraft.json` yet
+
 ## 0.1.1
 
 - Published from GitHub Actions with npm provenance, so every release can be traced to its source
