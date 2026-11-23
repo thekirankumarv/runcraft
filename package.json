@@ -1,6 +1,6 @@
 {
   "name": "runcraft",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A visual control center for local dev servers. Start, stop and watch every service in your project from one canvas in your browser.",
   "author": "Kiran Kumar V <thekirankumarv@gmail.com>",
   "license": "MIT",
