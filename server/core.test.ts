@@ -8,6 +8,7 @@ import { updateEnvText } from './env.ts'
 import { levelOf, portFrom, ServiceProcess } from './proc.ts'
 import { topoSort } from './project.ts'
 import { parseLsof, parseNetstat, parsePs, parseSs } from './system.ts'
+import type { TrafficEntry } from './types.ts'
 
 const alive = (pattern: string) => {
   try {
@@ -92,7 +93,7 @@ test('port listings parse on every platform', () => {
 })
 
 test('traffic hook reports requests without breaking late body reads', async () => {
-  const received: any[] = []
+  const received: TrafficEntry[] = []
   const sink = http.createServer((req, res) => {
     let raw = ''
     req.on('data', (c) => (raw += c))

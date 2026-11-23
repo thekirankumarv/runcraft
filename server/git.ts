@@ -7,8 +7,9 @@ const run = promisify(execFile)
 const git = (cwd: string, args: string[]) => run('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 }).then((r) => r.stdout)
 
 // Like git(), but fails with git's own message and never waits on a credential prompt.
+const NO_PROMPT = { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND ?? 'ssh -oBatchMode=yes' }
 const gitOrFail = (cwd: string, args: string[]) =>
-  run('git', args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }).then(
+  run('git', args, { cwd, env: NO_PROMPT, timeout: 120_000, maxBuffer: 64 * 1024 * 1024 }).then(
     (r) => r.stdout,
     (e) => {
       throw new Error(String(e.stderr || e.message).trim())
@@ -115,7 +116,7 @@ const lastFetch = new Map<string, number>()
 export function gitFetchInBackground(root: string, everyMs = 60_000) {
   if (Date.now() - (lastFetch.get(root) ?? 0) < everyMs) return
   lastFetch.set(root, Date.now())
-  run('git', ['fetch', '--quiet'], { cwd: root, timeout: 30_000, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }).catch(() => {})
+  run('git', ['fetch', '--quiet'], { cwd: root, timeout: 30_000, env: NO_PROMPT }).catch(() => {})
 }
 
 export async function gitBranches(dir: string) {
